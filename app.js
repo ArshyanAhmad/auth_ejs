@@ -5,7 +5,7 @@ import cookieParser from "cookie-parser";
 import jwt, { decode } from "jsonwebtoken"
 import 'dotenv/config';
 
-mongoose.connect(process.env.MONGO_URL)
+mongoose.connect(process.env.DATABSE_URL)
     .then(() => {
         console.log("Database is connected");
     })
@@ -98,7 +98,7 @@ app.post('/register', async (req, res) => {
         password
     })
 
-    const token = jwt.sign({ _id: user._id }, "secret")
+    const token = jwt.sign({ _id: user._id }, process.env.JWT_SECRET_1)
 
     res.cookie('token', token, {
         httpOnly: true,
@@ -117,7 +117,7 @@ app.post('/login', async (req, res) => {
         return res.redirect('/register');
     }
 
-    const token = jwt.sign({ _id: userExit._id }, "loginSecret")
+    const token = jwt.sign({ _id: userExit._id }, process.env.JWT_SECRET_2)
 
     res.cookie('token', token, {
         httpOnly: true,
