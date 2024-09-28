@@ -2,7 +2,7 @@ import express from "express";
 import mongoose from "mongoose";
 import path from "path";
 import cookieParser from "cookie-parser";
-import jwt from "jsonwebtoken"
+import jwt, { decode } from "jsonwebtoken"
 import 'dotenv/config';
 
 mongoose.connect(process.env.MONGO_URL)
@@ -22,27 +22,68 @@ const userSchema = new mongoose.Schema({
 const User = mongoose.model("User", userSchema);
 
 const app = express();
-const currPath = path.resolve();
 const PORT = process.env.PORT || 6000;
 
 app.set("view engine", "ejs");
 app.use(express.static(path.join(path.resolve(), "public")));
+app.use(cookieParser());
 app.use(express.urlencoded({ extended: true }));
 
 
-app.get("/", (req, res) => {
-    res.render('login.ejs');
+const isAuthenticate = async (req, res, next) => {
+    let { token } = req.cookies;
+
+    if (token) {
+        const decoded = jwt.verify(token, "loginSecret");
+        req.user = await User.findById(decoded._id);
+
+        next();
+    }
+    else {
+        res.redirect("/login");
+    }
+
+}
+
+app.get("/", isAuthenticate, (req, res) => {
+    const { name } = req.user;
+    res.render('logout', { name });
 });
 
+app.get("/logout", (req, res) => {
+    res.cookie("token", null, {
+        expires: new Date(Date.now()),
+        httpOnly: true
+    })
+
+    res.redirect('/login');
+})
+
 app.get("/register", (req, res) => {
-    res.render("register");
+    const { token } = req.cookies;
+
+    if (!token) {
+        return res.render("register");
+    }
+    else {
+        res.redirect('/');
+    }
 })
 
 app.get('/login', (req, res) => {
-    res.render("login");
+    const { token } = req.cookies;
+
+    if (!token) {
+        return res.render("login");
+    }
+    else {
+        res.redirect('/');
+    }
+
 })
 
 app.post('/register', async (req, res) => {
+
     const { name, email, password } = req.body;
 
     const userExit = await User.findOne({ email });
@@ -67,10 +108,28 @@ app.post('/register', async (req, res) => {
     res.redirect("/login");
 })
 
-app.post('/login', (req, res) => {
+app.post('/login', async (req, res) => {
     const { email, password } = req.body;
 
-    
+    const userExit = await User.findOne({ email });
+
+    if (!userExit) {
+        return res.redirect('/register');
+    }
+
+    const token = jwt.sign({ _id: userExit._id }, "loginSecret")
+
+    res.cookie('token', token, {
+        httpOnly: true,
+        expires: new Date(Date.now() + 60 * 1000),
+    })
+
+    if (email == userExit.email && password == userExit.password) {
+        res.redirect("/");
+    }
+    else {
+        res.redirect("/login");
+    }
 
 })
 
