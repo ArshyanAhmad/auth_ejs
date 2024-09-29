@@ -89,23 +89,32 @@ app.post('/register', async (req, res) => {
     const userExit = await User.findOne({ email });
 
     if (userExit) {
-        return res.redirect('/login');
+        return res.render('login');
     }
 
-    const user = await User.create({
-        name,
-        email,
-        password
-    })
+    if (name, email, password) {
 
-    const token = jwt.sign({ _id: user._id }, process.env.JWT_SECRET_1)
+        const user = await User.create({
+            name,
+            email,
+            password
+        })
 
-    res.cookie('token', token, {
-        httpOnly: true,
-        expires: new Date(Date.now() + 60 * 1000),
-    })
+        const token = jwt.sign({ _id: user._id }, process.env.JWT_SECRET_1)
 
-    res.redirect("/login");
+        res.cookie('token', token, {
+            httpOnly: true,
+            expires: new Date(Date.now() + 60 * 1000),
+        })
+
+        res.render("login");
+
+    }
+    else {
+        res.redirect("/register")
+    }
+
+
 })
 
 app.post('/login', async (req, res) => {
@@ -113,22 +122,28 @@ app.post('/login', async (req, res) => {
 
     const userExit = await User.findOne({ email });
 
-    if (!userExit) {
-        return res.redirect('/register');
-    }
+    if (email, password) {
 
-    const token = jwt.sign({ _id: userExit._id }, process.env.JWT_SECRET_2)
+        if (email === userExit.email && password === userExit.password) {
 
-    res.cookie('token', token, {
-        httpOnly: true,
-        expires: new Date(Date.now() + 60 * 1000),
-    })
+            const token = jwt.sign({ _id: userExit._id }, process.env.JWT_SECRET_2)
 
-    if (email == userExit.email && password == userExit.password) {
-        res.redirect("/");
+            res.cookie('token', token, {
+                httpOnly: true,
+                expires: new Date(Date.now() + 60 * 1000),
+            })
+
+            res.redirect("/");
+        }
+
+        else {
+            return res.redirect("/login");
+        }
+
+
     }
     else {
-        res.redirect("/login");
+        return res.render('login');
     }
 
 })
